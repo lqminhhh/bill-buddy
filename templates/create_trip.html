@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Create Trip | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h2>Create a New Trip</h2>
+    <p>Add a trip name, choose a currency, and list the members joining the trip.</p>
+
+    {% if errors %}
+        <div class="message message-error">
+            <p>Please fix the following:</p>
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="stack">
+        <div>
+            <label for="name">Trip Name</label>
+            <input
+                id="name"
+                name="name"
+                type="text"
+                value="{{ form_data['name'] }}"
+                placeholder="Weekend in New York"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="currency">Currency</label>
+            <input
+                id="currency"
+                name="currency"
+                type="text"
+                value="{{ form_data['currency'] }}"
+                placeholder="USD"
+                maxlength="3"
+                required
+            >
+        </div>
+
+        <div>
+            <h3>Members</h3>
+            <p class="help-text">Add up to {{ member_field_count }} members for this MVP. Choose exactly one person as yourself.</p>
+
+            {% for index in range(member_field_count) %}
+                <div class="member-row">
+                    <input
+                        id="member_name_{{ index }}"
+                        name="member_name_{{ index }}"
+                        type="text"
+                        value="{{ form_data['member_names'][index] if index < form_data['member_names']|length else '' }}"
+                        placeholder="Member {{ index + 1 }} name"
+                    >
+
+                    <label class="radio-label" for="self_member_{{ index }}">
+                        <input
+                            id="self_member_{{ index }}"
+                            name="self_member_index"
+                            type="radio"
+                            value="{{ index }}"
+                            {% if form_data['self_member_index'] == index|string %}checked{% endif %}
+                        >
+                        This is me
+                    </label>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div>
+            <button class="button" type="submit">Save Trip</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

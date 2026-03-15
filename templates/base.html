@@ -9,8 +9,16 @@
 <body>
     <header class="site-header">
         <div class="container">
-            <h1 class="site-title">Bill Buddy</h1>
-            <p class="site-tagline">A simple trip expense-sharing app.</p>
+            <div class="header-row">
+                <div>
+                    <h1 class="site-title"><a href="{{ url_for('index') }}">Bill Buddy</a></h1>
+                    <p class="site-tagline">Simple trip expense sharing for small groups.</p>
+                </div>
+                <nav class="site-nav">
+                    <a class="button button-secondary" href="{{ url_for('index') }}">All Trips</a>
+                    <a class="button" href="{{ url_for('create_trip') }}">New Trip</a>
+                </nav>
+            </div>
         </div>
     </header>
 

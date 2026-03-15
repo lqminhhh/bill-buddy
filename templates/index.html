@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Trips | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <h2>Your Trips</h2>
+        <p>Create a trip to start tracking shared expenses.</p>
+    </div>
+    <a class="button" href="{{ url_for('create_trip') }}">Create New Trip</a>
+</section>
+
+{% if trips %}
+    <section class="card">
+        <ul class="trip-list">
+            {% for trip in trips %}
+                <li class="trip-list-item">
+                    <div>
+                        <h3><a href="{{ url_for('trip_detail', trip_id=trip['id']) }}">{{ trip["name"] }}</a></h3>
+                        <p>Currency: {{ trip["currency"] }}</p>
+                    </div>
+                    <a class="button button-secondary" href="{{ url_for('trip_detail', trip_id=trip['id']) }}">View Trip</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% else %}
+    <section class="card empty-state">
+        <h3>No trips yet</h3>
+        <p>Start by creating your first trip.</p>
+        <a class="button" href="{{ url_for('create_trip') }}">Create Your First Trip</a>
+    </section>
+{% endif %}
+{% endblock %}

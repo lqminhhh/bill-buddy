@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ trip["name"] }} | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h2>{{ trip["name"] }}</h2>
+    <p>Currency: {{ trip["currency"] }}</p>
+</section>
+
+<section class="card">
+    <h3>Members</h3>
+    {% if members %}
+        <ul class="member-list">
+            {% for member in members %}
+                <li>
+                    {{ member["name"] }}
+                    {% if member["is_self"] %}
+                        <span class="badge">You</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No members added yet.</p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h3>Expenses</h3>
+    <p>Expenses will appear here in the next step.</p>
+</section>
+
+<section class="card">
+    <h3>Balances and Settlements</h3>
+    <p>Balance summaries and settlement suggestions will appear here later.</p>
+</section>
+{% endblock %}
