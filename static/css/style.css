@@ -1,0 +1,39 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f8;
+    color: #1f2933;
+}
+
+.container {
+    width: 90%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.site-header {
+    background-color: #1d4ed8;
+    color: #ffffff;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.site-title {
+    margin: 0;
+}
+
+.site-tagline {
+    margin-top: 0.5rem;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+ul {
+    padding-left: 1.25rem;
+}
