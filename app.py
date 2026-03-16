@@ -6,6 +6,7 @@ from utils.calculations import (
     calculate_net_balance_by_member,
     calculate_total_owed_share_by_member,
     calculate_total_paid_by_member,
+    simplify_settlements,
 )
 from utils.db import fetch_all, fetch_one, get_db_connection
 from utils.helpers import format_cents, parse_money_to_cents, safe_strip
@@ -125,6 +126,9 @@ def create_app():
         balance_summary = _build_member_balance_summary(
             members, expenses, expense_participants
         )
+        settlement_summary = _build_settlement_summary(
+            members, expenses, expense_participants, trip["currency"]
+        )
 
         return render_template(
             "trip_detail.html",
@@ -132,6 +136,7 @@ def create_app():
             members=members,
             expenses=expenses,
             balance_summary=balance_summary,
+            settlement_summary=settlement_summary,
         )
 
     @app.route("/trip/<int:trip_id>/expense/new", methods=["GET", "POST"])
@@ -364,6 +369,31 @@ def _build_member_balance_summary(members, expenses, expense_participants):
         )
 
     return summary
+
+
+def _build_settlement_summary(members, expenses, expense_participants, currency):
+    net_by_member = calculate_net_balance_by_member(
+        members, expenses, expense_participants
+    )
+    settlements = simplify_settlements(net_by_member)
+    member_names = {member["id"]: member["name"] for member in members}
+
+    lines = []
+    for settlement in settlements:
+        from_name = member_names[settlement["from_member_id"]]
+        to_name = member_names[settlement["to_member_id"]]
+        formatted_amount = format_cents(settlement["amount_cents"], currency)
+        lines.append(
+            {
+                "from_member_name": from_name,
+                "to_member_name": to_name,
+                "amount_cents": settlement["amount_cents"],
+                "formatted_amount": formatted_amount,
+                "text": f"{from_name} pays {to_name} {formatted_amount}",
+            }
+        )
+
+    return lines
 
 
 def _get_balance_class(net_balance):

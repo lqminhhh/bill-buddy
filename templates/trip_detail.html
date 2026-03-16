@@ -57,6 +57,19 @@
 </section>
 
 <section class="card">
+    <h3>Final Settlement</h3>
+    {% if settlement_summary %}
+        <ul class="settlement-list">
+            {% for settlement in settlement_summary %}
+                <li>{{ settlement["text"] }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Everyone is settled up already.</p>
+    {% endif %}
+</section>
+
+<section class="card">
     <h3>Expenses</h3>
     {% if expenses %}
         <ul class="expense-list">
@@ -83,10 +96,5 @@
     {% else %}
         <p>No expenses added yet.</p>
     {% endif %}
-</section>
-
-<section class="card">
-    <h3>Balances and Settlements</h3>
-    <p>Settlement suggestions will be added later.</p>
 </section>
 {% endblock %}
