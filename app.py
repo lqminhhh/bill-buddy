@@ -221,6 +221,22 @@ def create_app():
             form_data=form_data,
         )
 
+    @app.route("/trip/<int:trip_id>/expense/<int:expense_id>/delete", methods=["POST"])
+    def delete_expense(trip_id, expense_id):
+        _get_trip_or_404(trip_id)
+        _get_trip_expense_or_404(trip_id, expense_id)
+
+        with get_db_connection() as connection:
+            connection.execute(
+                """
+                DELETE FROM expenses
+                WHERE id = ? AND trip_id = ?
+                """,
+                (expense_id, trip_id),
+            )
+
+        return redirect(url_for("trip_detail", trip_id=trip_id))
+
     return app
 
 

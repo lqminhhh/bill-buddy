@@ -3,9 +3,14 @@
 {% block title %}Edit Expense | Bill Buddy{% endblock %}
 
 {% block content %}
-<section class="card">
-    <h2>Edit Expense</h2>
-    <p>Trip: {{ trip["name"] }}</p>
+<section class="section-card form-card">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Edit Expense</p>
+            <h2>Update expense details</h2>
+            <p class="section-intro">Trip: {{ trip["name"] }}</p>
+        </div>
+    </div>
 
     {% if errors %}
         <div class="message message-error">
@@ -19,70 +24,79 @@
     {% endif %}
 
     <form method="post" class="stack">
-        <div>
-            <label for="description">Description</label>
-            <input
-                id="description"
-                name="description"
-                type="text"
-                value="{{ form_data['description'] }}"
-                placeholder="Dinner"
-                required
-            >
+        <div class="form-grid">
+            <div>
+                <label for="description">Description</label>
+                <input
+                    id="description"
+                    name="description"
+                    type="text"
+                    value="{{ form_data['description'] }}"
+                    placeholder="Dinner"
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="amount">Amount</label>
+                <input
+                    id="amount"
+                    name="amount"
+                    type="text"
+                    value="{{ form_data['amount'] }}"
+                    placeholder="12.50"
+                    required
+                >
+            </div>
         </div>
 
-        <div>
-            <label for="amount">Amount</label>
-            <input
-                id="amount"
-                name="amount"
-                type="text"
-                value="{{ form_data['amount'] }}"
-                placeholder="12.50"
-                required
-            >
+        <div class="form-grid">
+            <div>
+                <label for="expense_date">Date</label>
+                <input
+                    id="expense_date"
+                    name="expense_date"
+                    type="date"
+                    value="{{ form_data['expense_date'] }}"
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="paid_by_member_id">Paid By</label>
+                <select id="paid_by_member_id" name="paid_by_member_id" required>
+                    <option value="">Select a member</option>
+                    {% for member in members %}
+                        <option
+                            value="{{ member['id'] }}"
+                            {% if form_data['paid_by_member_id'] == member['id']|string %}selected{% endif %}
+                        >
+                            {{ member["name"] }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
-        <div>
-            <label for="expense_date">Date</label>
-            <input
-                id="expense_date"
-                name="expense_date"
-                type="date"
-                value="{{ form_data['expense_date'] }}"
-                required
-            >
-        </div>
-
-        <div>
-            <label for="paid_by_member_id">Paid By</label>
-            <select id="paid_by_member_id" name="paid_by_member_id" required>
-                <option value="">Select a member</option>
+        <div class="subsection">
+            <div class="subsection-header">
+                <h3>Participants</h3>
+                <p class="help-text">Select everyone who should share this expense.</p>
+            </div>
+            <div class="checkbox-grid">
                 {% for member in members %}
-                    <option
-                        value="{{ member['id'] }}"
-                        {% if form_data['paid_by_member_id'] == member['id']|string %}selected{% endif %}
-                    >
-                        {{ member["name"] }}
-                    </option>
+                    <label class="checkbox-card" for="participant_{{ member['id'] }}">
+                        <input
+                            id="participant_{{ member['id'] }}"
+                            name="participant_ids"
+                            type="checkbox"
+                            value="{{ member['id'] }}"
+                            {% if member['id']|string in form_data['participant_ids'] %}checked{% endif %}
+                        >
+                        <span>{{ member["name"] }}</span>
+                    </label>
                 {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <h3>Participants</h3>
-            {% for member in members %}
-                <label class="checkbox-label" for="participant_{{ member['id'] }}">
-                    <input
-                        id="participant_{{ member['id'] }}"
-                        name="participant_ids"
-                        type="checkbox"
-                        value="{{ member['id'] }}"
-                        {% if member['id']|string in form_data['participant_ids'] %}checked{% endif %}
-                    >
-                    {{ member["name"] }}
-                </label>
-            {% endfor %}
+            </div>
         </div>
 
         <div>

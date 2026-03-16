@@ -3,103 +3,155 @@
 {% block title %}{{ trip["name"] }} | Bill Buddy{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<section class="hero-panel">
     <div>
+        <p class="eyebrow">Trip Overview</p>
         <h2>{{ trip["name"] }}</h2>
-        <p>Currency: {{ trip["currency"] }}</p>
+        <p class="section-intro">Currency: {{ trip["currency"] }}</p>
     </div>
-    <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add Expense</a>
+    <div class="page-actions">
+        <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add Expense</a>
+        <a class="button button-secondary" href="{{ url_for('index') }}">Back to Trips</a>
+    </div>
 </section>
 
-<section class="card">
-    <h3>Members</h3>
-    {% if members %}
-        <ul class="member-list">
-            {% for member in members %}
-                <li>
-                    {{ member["name"] }}
-                    {% if member["is_self"] %}
-                        <span class="badge">You</span>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>No members added yet.</p>
-    {% endif %}
-</section>
+<section class="content-grid">
+    <div class="main-column">
+        <section class="section-card">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Balances</p>
+                    <h3>Per-member summary</h3>
+                </div>
+            </div>
 
-<section class="card">
-    <h3>Per-Member Balances</h3>
-    {% if balance_summary %}
-        <div class="balance-grid">
-            {% for member in balance_summary %}
-                <article class="balance-card">
-                    <div class="balance-card-header">
-                        <h4>
-                            {{ member["name"] }}
+            {% if balance_summary %}
+                <div class="balance-grid">
+                    {% for member in balance_summary %}
+                        <article class="balance-card">
+                            <div class="balance-card-header">
+                                <h4>
+                                    {{ member["name"] }}
+                                    {% if member["is_self"] %}
+                                        <span class="badge">You</span>
+                                    {% endif %}
+                                </h4>
+                            </div>
+                            <p>Total paid: {{ format_cents(member["total_paid"], trip["currency"]) }}</p>
+                            <p>Total share: {{ format_cents(member["total_share"], trip["currency"]) }}</p>
+                            <p class="balance-value {{ member['balance_class'] }}">
+                                Net balance: {{ format_cents(member["net_balance"], trip["currency"]) }}
+                            </p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-panel compact-empty">
+                    <h4>No balance data yet</h4>
+                    <p>Add an expense to see how much each member paid, owes, and should receive.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Settlement</p>
+                    <h3>Final settlement</h3>
+                </div>
+            </div>
+
+            {% if settlement_summary %}
+                <ul class="settlement-list">
+                    {% for settlement in settlement_summary %}
+                        <li class="settlement-item">{{ settlement["text"] }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-panel compact-empty">
+                    <h4>Everyone is settled</h4>
+                    <p>There are no remaining payments needed for this trip.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="section-card">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Expenses</p>
+                    <h3>Expense history</h3>
+                </div>
+            </div>
+
+            {% if expenses %}
+                <ul class="expense-list">
+                    {% for expense in expenses %}
+                        <li class="expense-item">
+                            <div class="expense-header">
+                                <div>
+                                    <strong>{{ expense["description"] }}</strong>
+                                    <p class="meta-line">{{ expense["expense_date"] }}</p>
+                                </div>
+                                <div class="expense-actions">
+                                    <span class="expense-amount">{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
+                                    <a class="button button-secondary button-small" href="{{ url_for('edit_expense', trip_id=trip['id'], expense_id=expense['id']) }}">Edit</a>
+                                    <form method="post" action="{{ url_for('delete_expense', trip_id=trip['id'], expense_id=expense['id']) }}" class="inline-form">
+                                        <button class="button button-danger button-small" type="submit">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="detail-list">
+                                <p><span class="detail-label">Paid by</span> {{ expense["payer_name"] }}</p>
+                                <p>
+                                    <span class="detail-label">Participants</span>
+                                    {% for participant in expense["participants"] %}
+                                        {{ participant["name"] }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                                {% if expense["notes"] %}
+                                    <p><span class="detail-label">Notes</span> {{ expense["notes"] }}</p>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-panel compact-empty">
+                    <h4>No expenses yet</h4>
+                    <p>Add the first shared cost for this trip to start tracking balances.</p>
+                    <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add First Expense</a>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <aside class="side-column">
+        <section class="section-card">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Members</p>
+                    <h3>Trip members</h3>
+                </div>
+            </div>
+
+            {% if members %}
+                <ul class="member-list">
+                    {% for member in members %}
+                        <li class="member-item">
+                            <span>{{ member["name"] }}</span>
                             {% if member["is_self"] %}
                                 <span class="badge">You</span>
                             {% endif %}
-                        </h4>
-                    </div>
-                    <p>Total paid: {{ format_cents(member["total_paid"], trip["currency"]) }}</p>
-                    <p>Total share: {{ format_cents(member["total_share"], trip["currency"]) }}</p>
-                    <p class="balance-value {{ member['balance_class'] }}">
-                        Net balance: {{ format_cents(member["net_balance"], trip["currency"]) }}
-                    </p>
-                </article>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No balance data yet.</p>
-    {% endif %}
-</section>
-
-<section class="card">
-    <h3>Final Settlement</h3>
-    {% if settlement_summary %}
-        <ul class="settlement-list">
-            {% for settlement in settlement_summary %}
-                <li>{{ settlement["text"] }}</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>Everyone is settled up already.</p>
-    {% endif %}
-</section>
-
-<section class="card">
-    <h3>Expenses</h3>
-    {% if expenses %}
-        <ul class="expense-list">
-            {% for expense in expenses %}
-                <li class="expense-item">
-                    <div class="expense-header">
-                        <div>
-                            <strong>{{ expense["description"] }}</strong>
-                        </div>
-                        <div class="expense-actions">
-                            <span>{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
-                            <a class="button button-secondary button-small" href="{{ url_for('edit_expense', trip_id=trip['id'], expense_id=expense['id']) }}">Edit</a>
-                        </div>
-                    </div>
-                    <p>Date: {{ expense["expense_date"] }}</p>
-                    <p>Paid by: {{ expense["payer_name"] }}</p>
-                    <p>
-                        Participants:
-                        {% for participant in expense["participants"] %}
-                            {{ participant["name"] }}{% if not loop.last %}, {% endif %}
-                        {% endfor %}
-                    </p>
-                    {% if expense["notes"] %}
-                        <p>Notes: {{ expense["notes"] }}</p>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>No expenses added yet.</p>
-    {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-panel compact-empty">
+                    <h4>No members added yet</h4>
+                    <p>This trip does not have any members yet.</p>
+                </div>
+            {% endif %}
+        </section>
+    </aside>
 </section>
 {% endblock %}

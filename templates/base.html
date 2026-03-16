@@ -4,26 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bill Buddy{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <header class="site-header">
-        <div class="container">
-            <div class="header-row">
-                <div>
+    <div class="page-shell">
+        <header class="site-header">
+            <div class="container header-row">
+                <div class="brand-block">
+                    <p class="eyebrow">Trip Expense Tracker</p>
                     <h1 class="site-title"><a href="{{ url_for('index') }}">Bill Buddy</a></h1>
-                    <p class="site-tagline">Simple trip expense sharing for small groups.</p>
+                    <p class="site-tagline">A simple web app that helps a group track shared trip expenses.</p>
                 </div>
                 <nav class="site-nav">
                     <a class="button button-secondary" href="{{ url_for('index') }}">All Trips</a>
-                    <a class="button" href="{{ url_for('create_trip') }}">New Trip</a>
+                    <a class="button" href="{{ url_for('create_trip') }}">Create Trip</a>
                 </nav>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
+        <main class="container page-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <p>Bill Buddy MVP built with Flask, SQLite, and Jinja templates.</p>
+            </div>
+        </footer>
+    </div>
 </body>
 </html>

@@ -3,9 +3,14 @@
 {% block title %}Create Trip | Bill Buddy{% endblock %}
 
 {% block content %}
-<section class="card">
-    <h2>Create a New Trip</h2>
-    <p>Add a trip name, choose a currency, and list the members joining the trip.</p>
+<section class="section-card form-card">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">New Trip</p>
+            <h2>Create a trip</h2>
+            <p class="section-intro">Start with a trip name, choose a currency, and add the people who are joining.</p>
+        </div>
+    </div>
 
     {% if errors %}
         <div class="message message-error">
@@ -19,34 +24,38 @@
     {% endif %}
 
     <form method="post" class="stack">
-        <div>
-            <label for="name">Trip Name</label>
-            <input
-                id="name"
-                name="name"
-                type="text"
-                value="{{ form_data['name'] }}"
-                placeholder="Weekend in New York"
-                required
-            >
+        <div class="form-grid">
+            <div>
+                <label for="name">Trip Name</label>
+                <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value="{{ form_data['name'] }}"
+                    placeholder="Weekend in New York"
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="currency">Currency</label>
+                <input
+                    id="currency"
+                    name="currency"
+                    type="text"
+                    value="{{ form_data['currency'] }}"
+                    placeholder="USD"
+                    maxlength="3"
+                    required
+                >
+            </div>
         </div>
 
-        <div>
-            <label for="currency">Currency</label>
-            <input
-                id="currency"
-                name="currency"
-                type="text"
-                value="{{ form_data['currency'] }}"
-                placeholder="USD"
-                maxlength="3"
-                required
-            >
-        </div>
-
-        <div>
-            <h3>Members</h3>
-            <p class="help-text">Add up to {{ member_field_count }} members for this MVP. Choose exactly one person as yourself.</p>
+        <div class="subsection">
+            <div class="subsection-header">
+                <h3>Members</h3>
+                <p class="help-text">Add up to {{ member_field_count }} members for this MVP and choose exactly one person as yourself.</p>
+            </div>
 
             {% for index in range(member_field_count) %}
                 <div class="member-row">
@@ -72,8 +81,9 @@
             {% endfor %}
         </div>
 
-        <div>
+        <div class="page-actions">
             <button class="button" type="submit">Save Trip</button>
+            <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
         </div>
     </form>
 </section>

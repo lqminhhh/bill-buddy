@@ -3,32 +3,41 @@
 {% block title %}Trips | Bill Buddy{% endblock %}
 
 {% block content %}
-<section class="page-header">
+<section class="hero-panel">
     <div>
+        <p class="eyebrow">Dashboard</p>
         <h2>Your Trips</h2>
-        <p>Create a trip to start tracking shared expenses.</p>
+        <p class="section-intro">Create a trip, add members, log shared expenses, and let Bill Buddy show who paid, who owes, and how to settle up.</p>
     </div>
-    <a class="button" href="{{ url_for('create_trip') }}">Create New Trip</a>
+    <a class="button" href="{{ url_for('create_trip') }}">Start a New Trip</a>
 </section>
 
 {% if trips %}
-    <section class="card">
+    <section class="section-card">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Saved Trips</p>
+                <h3>Recent trip list</h3>
+            </div>
+        </div>
+
         <ul class="trip-list">
             {% for trip in trips %}
                 <li class="trip-list-item">
                     <div>
                         <h3><a href="{{ url_for('trip_detail', trip_id=trip['id']) }}">{{ trip["name"] }}</a></h3>
-                        <p>Currency: {{ trip["currency"] }}</p>
+                        <p class="meta-line">Currency: {{ trip["currency"] }}</p>
                     </div>
-                    <a class="button button-secondary" href="{{ url_for('trip_detail', trip_id=trip['id']) }}">View Trip</a>
+                    <a class="button button-secondary" href="{{ url_for('trip_detail', trip_id=trip['id']) }}">Open Trip</a>
                 </li>
             {% endfor %}
         </ul>
     </section>
 {% else %}
-    <section class="card empty-state">
+    <section class="empty-panel">
+        <p class="eyebrow">No data yet</p>
         <h3>No trips yet</h3>
-        <p>Start by creating your first trip.</p>
+        <p>Create your first trip to start tracking group expenses and balances.</p>
         <a class="button" href="{{ url_for('create_trip') }}">Create Your First Trip</a>
     </section>
 {% endif %}
