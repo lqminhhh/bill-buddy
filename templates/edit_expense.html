@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Expense | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h2>Edit Expense</h2>
+    <p>Trip: {{ trip["name"] }}</p>
+
+    {% if errors %}
+        <div class="message message-error">
+            <p>Please fix the following:</p>
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="stack">
+        <div>
+            <label for="description">Description</label>
+            <input
+                id="description"
+                name="description"
+                type="text"
+                value="{{ form_data['description'] }}"
+                placeholder="Dinner"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="amount">Amount</label>
+            <input
+                id="amount"
+                name="amount"
+                type="text"
+                value="{{ form_data['amount'] }}"
+                placeholder="12.50"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="expense_date">Date</label>
+            <input
+                id="expense_date"
+                name="expense_date"
+                type="date"
+                value="{{ form_data['expense_date'] }}"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="paid_by_member_id">Paid By</label>
+            <select id="paid_by_member_id" name="paid_by_member_id" required>
+                <option value="">Select a member</option>
+                {% for member in members %}
+                    <option
+                        value="{{ member['id'] }}"
+                        {% if form_data['paid_by_member_id'] == member['id']|string %}selected{% endif %}
+                    >
+                        {{ member["name"] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <h3>Participants</h3>
+            {% for member in members %}
+                <label class="checkbox-label" for="participant_{{ member['id'] }}">
+                    <input
+                        id="participant_{{ member['id'] }}"
+                        name="participant_ids"
+                        type="checkbox"
+                        value="{{ member['id'] }}"
+                        {% if member['id']|string in form_data['participant_ids'] %}checked{% endif %}
+                    >
+                    {{ member["name"] }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <div>
+            <label for="notes">Notes</label>
+            <textarea
+                id="notes"
+                name="notes"
+                rows="4"
+                placeholder="Optional notes"
+            >{{ form_data['notes'] }}</textarea>
+        </div>
+
+        <div class="page-actions">
+            <button class="button" type="submit">Update Expense</button>
+            <a class="button button-secondary" href="{{ url_for('trip_detail', trip_id=trip['id']) }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

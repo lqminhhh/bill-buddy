@@ -76,8 +76,13 @@
             {% for expense in expenses %}
                 <li class="expense-item">
                     <div class="expense-header">
-                        <strong>{{ expense["description"] }}</strong>
-                        <span>{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
+                        <div>
+                            <strong>{{ expense["description"] }}</strong>
+                        </div>
+                        <div class="expense-actions">
+                            <span>{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
+                            <a class="button button-secondary button-small" href="{{ url_for('edit_expense', trip_id=trip['id'], expense_id=expense['id']) }}">Edit</a>
+                        </div>
                     </div>
                     <p>Date: {{ expense["expense_date"] }}</p>
                     <p>Paid by: {{ expense["payer_name"] }}</p>

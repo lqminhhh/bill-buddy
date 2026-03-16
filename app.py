@@ -143,7 +143,6 @@ def create_app():
     def add_expense(trip_id):
         trip = _get_trip_or_404(trip_id)
         members = _get_trip_members(trip_id)
-        member_ids = {member["id"] for member in members}
         errors = []
         form_data = {
             "description": "",
@@ -155,93 +154,68 @@ def create_app():
         }
 
         if request.method == "POST":
-            form_data = {
-                "description": safe_strip(request.form.get("description")),
-                "amount": safe_strip(request.form.get("amount")),
-                "expense_date": safe_strip(request.form.get("expense_date")),
-                "paid_by_member_id": safe_strip(request.form.get("paid_by_member_id")),
-                "participant_ids": request.form.getlist("participant_ids"),
-                "notes": safe_strip(request.form.get("notes")),
-            }
-
-            if not form_data["description"]:
-                errors.append("Description is required.")
-
-            try:
-                amount_cents = parse_money_to_cents(form_data["amount"])
-            except ValueError as exc:
-                errors.append(str(exc))
-                amount_cents = None
-
-            if not form_data["expense_date"]:
-                errors.append("Date is required.")
-
-            try:
-                paid_by_member_id = int(form_data["paid_by_member_id"])
-            except ValueError:
-                errors.append("Choose who paid for this expense.")
-                paid_by_member_id = None
-
-            if paid_by_member_id is not None and paid_by_member_id not in member_ids:
-                errors.append("Choose a valid trip member as the payer.")
-
-            participant_ids = []
-            if not form_data["participant_ids"]:
-                errors.append("Select at least one participant.")
-            else:
-                try:
-                    participant_ids = [
-                        int(member_id) for member_id in form_data["participant_ids"]
-                    ]
-                except ValueError:
-                    errors.append("Participants must be valid trip members.")
-
-            if participant_ids:
-                invalid_participants = [
-                    member_id for member_id in participant_ids if member_id not in member_ids
-                ]
-                if invalid_participants:
-                    errors.append("Participants must be valid trip members.")
+            form_data = _build_expense_form_data(request.form)
+            errors, cleaned_data = _validate_expense_form(form_data, members)
 
             if not errors:
                 with get_db_connection() as connection:
-                    expense_cursor = connection.execute(
-                        """
-                        INSERT INTO expenses (
-                            trip_id,
-                            description,
-                            amount_cents,
-                            expense_date,
-                            paid_by_member_id,
-                            notes
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            trip_id,
-                            form_data["description"],
-                            amount_cents,
-                            form_data["expense_date"],
-                            paid_by_member_id,
-                            form_data["notes"] or None,
-                        ),
+                    expense_id = _insert_expense(connection, trip_id, cleaned_data)
+                    _replace_expense_participants(
+                        connection, expense_id, cleaned_data["participant_ids"]
                     )
-                    expense_id = expense_cursor.lastrowid
-
-                    for participant_id in participant_ids:
-                        connection.execute(
-                            """
-                            INSERT INTO expense_participants (expense_id, member_id)
-                            VALUES (?, ?)
-                            """,
-                            (expense_id, participant_id),
-                        )
 
                 return redirect(url_for("trip_detail", trip_id=trip_id))
 
         return render_template(
             "add_expense.html",
             trip=trip,
+            members=members,
+            errors=errors,
+            form_data=form_data,
+        )
+
+    @app.route("/trip/<int:trip_id>/expense/<int:expense_id>/edit", methods=["GET", "POST"])
+    def edit_expense(trip_id, expense_id):
+        trip = _get_trip_or_404(trip_id)
+        members = _get_trip_members(trip_id)
+        expense = _get_trip_expense_or_404(trip_id, expense_id)
+
+        if request.method == "POST":
+            form_data = _build_expense_form_data(request.form)
+            errors, cleaned_data = _validate_expense_form(form_data, members)
+
+            if not errors:
+                with get_db_connection() as connection:
+                    connection.execute(
+                        """
+                        UPDATE expenses
+                        SET description = ?, amount_cents = ?, expense_date = ?,
+                            paid_by_member_id = ?, notes = ?
+                        WHERE id = ? AND trip_id = ?
+                        """,
+                        (
+                            cleaned_data["description"],
+                            cleaned_data["amount_cents"],
+                            cleaned_data["expense_date"],
+                            cleaned_data["paid_by_member_id"],
+                            cleaned_data["notes"],
+                            expense_id,
+                            trip_id,
+                        ),
+                    )
+                    _replace_expense_participants(
+                        connection, expense_id, cleaned_data["participant_ids"]
+                    )
+
+                return redirect(url_for("trip_detail", trip_id=trip_id))
+        else:
+            form_data = _build_expense_form_data_from_expense(expense)
+            errors = []
+
+        return render_template(
+            "edit_expense.html",
+            trip=trip,
+            expense=expense,
             members=members,
             errors=errors,
             form_data=form_data,
@@ -344,6 +318,40 @@ def _get_trip_expense_participants(trip_id):
     return [dict(row) for row in rows]
 
 
+def _get_trip_expense_or_404(trip_id, expense_id):
+    row = fetch_one(
+        """
+        SELECT
+            id,
+            trip_id,
+            description,
+            amount_cents,
+            expense_date,
+            paid_by_member_id,
+            notes
+        FROM expenses
+        WHERE id = ? AND trip_id = ?
+        """,
+        (expense_id, trip_id),
+    )
+
+    if row is None:
+        abort(404)
+
+    expense = dict(row)
+    participant_rows = fetch_all(
+        """
+        SELECT member_id
+        FROM expense_participants
+        WHERE expense_id = ?
+        ORDER BY member_id ASC
+        """,
+        (expense_id,),
+    )
+    expense["participant_ids"] = [str(row["member_id"]) for row in participant_rows]
+    return expense
+
+
 def _build_member_balance_summary(members, expenses, expense_participants):
     paid_by_member = calculate_total_paid_by_member(members, expenses)
     share_by_member = calculate_total_owed_share_by_member(
@@ -394,6 +402,122 @@ def _build_settlement_summary(members, expenses, expense_participants, currency)
         )
 
     return lines
+
+
+def _build_expense_form_data(form):
+    return {
+        "description": safe_strip(form.get("description")),
+        "amount": safe_strip(form.get("amount")),
+        "expense_date": safe_strip(form.get("expense_date")),
+        "paid_by_member_id": safe_strip(form.get("paid_by_member_id")),
+        "participant_ids": form.getlist("participant_ids"),
+        "notes": safe_strip(form.get("notes")),
+    }
+
+
+def _build_expense_form_data_from_expense(expense):
+    return {
+        "description": expense["description"],
+        "amount": f"{expense['amount_cents'] / 100:.2f}",
+        "expense_date": expense["expense_date"],
+        "paid_by_member_id": str(expense["paid_by_member_id"]),
+        "participant_ids": expense["participant_ids"],
+        "notes": expense["notes"] or "",
+    }
+
+
+def _validate_expense_form(form_data, members):
+    member_ids = {member["id"] for member in members}
+    errors = []
+
+    if not form_data["description"]:
+        errors.append("Description is required.")
+
+    try:
+        amount_cents = parse_money_to_cents(form_data["amount"])
+    except ValueError as exc:
+        errors.append(str(exc))
+        amount_cents = None
+
+    if not form_data["expense_date"]:
+        errors.append("Date is required.")
+
+    try:
+        paid_by_member_id = int(form_data["paid_by_member_id"])
+    except ValueError:
+        errors.append("Choose who paid for this expense.")
+        paid_by_member_id = None
+
+    if paid_by_member_id is not None and paid_by_member_id not in member_ids:
+        errors.append("Choose a valid trip member as the payer.")
+
+    participant_ids = []
+    if not form_data["participant_ids"]:
+        errors.append("Select at least one participant.")
+    else:
+        try:
+            participant_ids = [int(member_id) for member_id in form_data["participant_ids"]]
+        except ValueError:
+            errors.append("Participants must be valid trip members.")
+
+    if participant_ids:
+        invalid_participants = [
+            member_id for member_id in participant_ids if member_id not in member_ids
+        ]
+        if invalid_participants:
+            errors.append("Participants must be valid trip members.")
+
+    cleaned_data = {
+        "description": form_data["description"],
+        "amount_cents": amount_cents,
+        "expense_date": form_data["expense_date"],
+        "paid_by_member_id": paid_by_member_id,
+        "participant_ids": participant_ids,
+        "notes": form_data["notes"] or None,
+    }
+
+    return errors, cleaned_data
+
+
+def _insert_expense(connection, trip_id, cleaned_data):
+    cursor = connection.execute(
+        """
+        INSERT INTO expenses (
+            trip_id,
+            description,
+            amount_cents,
+            expense_date,
+            paid_by_member_id,
+            notes
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            trip_id,
+            cleaned_data["description"],
+            cleaned_data["amount_cents"],
+            cleaned_data["expense_date"],
+            cleaned_data["paid_by_member_id"],
+            cleaned_data["notes"],
+        ),
+    )
+    return cursor.lastrowid
+
+
+def _replace_expense_participants(connection, expense_id, participant_ids):
+    connection.execute(
+        "DELETE FROM expense_participants WHERE expense_id = ?",
+        (expense_id,),
+    )
+
+    for participant_id in participant_ids:
+        connection.execute(
+            """
+            INSERT INTO expense_participants (expense_id, member_id)
+            VALUES (?, ?)
+            """,
+            (expense_id, participant_id),
+        )
 
 
 def _get_balance_class(net_balance):
