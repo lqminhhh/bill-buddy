@@ -159,6 +159,40 @@ textarea {
     gap: 1rem;
 }
 
+.balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.balance-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem;
+    background-color: #f8fafc;
+}
+
+.balance-card-header h4 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+.balance-value {
+    font-weight: bold;
+}
+
+.balance-positive {
+    color: #166534;
+}
+
+.balance-negative {
+    color: #b91c1c;
+}
+
+.balance-neutral {
+    color: #475569;
+}
+
 .empty-state {
     text-align: center;
 }

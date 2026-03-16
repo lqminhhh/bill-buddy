@@ -2,6 +2,11 @@ from datetime import date
 
 from flask import Flask, abort, redirect, render_template, request, url_for
 
+from utils.calculations import (
+    calculate_net_balance_by_member,
+    calculate_total_owed_share_by_member,
+    calculate_total_paid_by_member,
+)
 from utils.db import fetch_all, fetch_one, get_db_connection
 from utils.helpers import format_cents, parse_money_to_cents, safe_strip
 
@@ -116,12 +121,17 @@ def create_app():
         trip = _get_trip_or_404(trip_id)
         members = _get_trip_members(trip_id)
         expenses = _get_trip_expenses(trip_id)
+        expense_participants = _get_trip_expense_participants(trip_id)
+        balance_summary = _build_member_balance_summary(
+            members, expenses, expense_participants
+        )
 
         return render_template(
             "trip_detail.html",
             trip=trip,
             members=members,
             expenses=expenses,
+            balance_summary=balance_summary,
         )
 
     @app.route("/trip/<int:trip_id>/expense/new", methods=["GET", "POST"])
@@ -175,7 +185,9 @@ def create_app():
                 errors.append("Select at least one participant.")
             else:
                 try:
-                    participant_ids = [int(member_id) for member_id in form_data["participant_ids"]]
+                    participant_ids = [
+                        int(member_id) for member_id in form_data["participant_ids"]
+                    ]
                 except ValueError:
                     errors.append("Participants must be valid trip members.")
 
@@ -250,7 +262,7 @@ def _get_trip_or_404(trip_id):
 
 
 def _get_trip_members(trip_id):
-    return fetch_all(
+    rows = fetch_all(
         """
         SELECT id, name, is_self
         FROM members
@@ -259,6 +271,7 @@ def _get_trip_members(trip_id):
         """,
         (trip_id,),
     )
+    return [dict(row) for row in rows]
 
 
 def _get_trip_expenses(trip_id):
@@ -310,9 +323,59 @@ def _get_trip_expenses(trip_id):
     return expenses
 
 
+def _get_trip_expense_participants(trip_id):
+    rows = fetch_all(
+        """
+        SELECT
+            expense_participants.expense_id,
+            expense_participants.member_id
+        FROM expense_participants
+        JOIN expenses ON expenses.id = expense_participants.expense_id
+        WHERE expenses.trip_id = ?
+        ORDER BY expense_participants.expense_id ASC, expense_participants.member_id ASC
+        """,
+        (trip_id,),
+    )
+    return [dict(row) for row in rows]
+
+
+def _build_member_balance_summary(members, expenses, expense_participants):
+    paid_by_member = calculate_total_paid_by_member(members, expenses)
+    share_by_member = calculate_total_owed_share_by_member(
+        members, expenses, expense_participants
+    )
+    net_by_member = calculate_net_balance_by_member(
+        members, expenses, expense_participants
+    )
+
+    summary = []
+    for member in members:
+        net_balance = net_by_member[member["id"]]
+        summary.append(
+            {
+                "id": member["id"],
+                "name": member["name"],
+                "is_self": member["is_self"],
+                "total_paid": paid_by_member[member["id"]],
+                "total_share": share_by_member[member["id"]],
+                "net_balance": net_balance,
+                "balance_class": _get_balance_class(net_balance),
+            }
+        )
+
+    return summary
+
+
+def _get_balance_class(net_balance):
+    if net_balance > 0:
+        return "balance-positive"
+    if net_balance < 0:
+        return "balance-negative"
+    return "balance-neutral"
+
+
 app = create_app()
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
-

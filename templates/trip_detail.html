@@ -30,6 +30,33 @@
 </section>
 
 <section class="card">
+    <h3>Per-Member Balances</h3>
+    {% if balance_summary %}
+        <div class="balance-grid">
+            {% for member in balance_summary %}
+                <article class="balance-card">
+                    <div class="balance-card-header">
+                        <h4>
+                            {{ member["name"] }}
+                            {% if member["is_self"] %}
+                                <span class="badge">You</span>
+                            {% endif %}
+                        </h4>
+                    </div>
+                    <p>Total paid: {{ format_cents(member["total_paid"], trip["currency"]) }}</p>
+                    <p>Total share: {{ format_cents(member["total_share"], trip["currency"]) }}</p>
+                    <p class="balance-value {{ member['balance_class'] }}">
+                        Net balance: {{ format_cents(member["net_balance"], trip["currency"]) }}
+                    </p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No balance data yet.</p>
+    {% endif %}
+</section>
+
+<section class="card">
     <h3>Expenses</h3>
     {% if expenses %}
         <ul class="expense-list">
@@ -60,6 +87,6 @@
 
 <section class="card">
     <h3>Balances and Settlements</h3>
-    <p>Balance summaries and settlement suggestions will appear here later.</p>
+    <p>Settlement suggestions will be added later.</p>
 </section>
 {% endblock %}
