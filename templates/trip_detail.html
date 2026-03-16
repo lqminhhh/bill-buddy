@@ -3,9 +3,12 @@
 {% block title %}{{ trip["name"] }} | Bill Buddy{% endblock %}
 
 {% block content %}
-<section class="card">
-    <h2>{{ trip["name"] }}</h2>
-    <p>Currency: {{ trip["currency"] }}</p>
+<section class="page-header">
+    <div>
+        <h2>{{ trip["name"] }}</h2>
+        <p>Currency: {{ trip["currency"] }}</p>
+    </div>
+    <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add Expense</a>
 </section>
 
 <section class="card">
@@ -28,7 +31,31 @@
 
 <section class="card">
     <h3>Expenses</h3>
-    <p>Expenses will appear here in the next step.</p>
+    {% if expenses %}
+        <ul class="expense-list">
+            {% for expense in expenses %}
+                <li class="expense-item">
+                    <div class="expense-header">
+                        <strong>{{ expense["description"] }}</strong>
+                        <span>{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
+                    </div>
+                    <p>Date: {{ expense["expense_date"] }}</p>
+                    <p>Paid by: {{ expense["payer_name"] }}</p>
+                    <p>
+                        Participants:
+                        {% for participant in expense["participants"] %}
+                            {{ participant["name"] }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% if expense["notes"] %}
+                        <p>Notes: {{ expense["notes"] }}</p>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No expenses added yet.</p>
+    {% endif %}
 </section>
 
 <section class="card">

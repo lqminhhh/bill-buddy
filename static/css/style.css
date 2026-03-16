@@ -20,13 +20,21 @@ label {
     margin-bottom: 0.4rem;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="date"],
+select,
+textarea {
     width: 100%;
     box-sizing: border-box;
     padding: 0.75rem;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 1rem;
+    font-family: Arial, sans-serif;
+}
+
+textarea {
+    resize: vertical;
 }
 
 .container {
@@ -114,7 +122,8 @@ input[type="text"] {
 }
 
 .trip-list,
-.member-list {
+.member-list,
+.expense-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -133,6 +142,23 @@ input[type="text"] {
     border-bottom: none;
 }
 
+.expense-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.expense-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.expense-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
 .empty-state {
     text-align: center;
 }
@@ -149,13 +175,13 @@ input[type="text"] {
     margin-bottom: 0.75rem;
 }
 
-.radio-label {
+.radio-label,
+.checkbox-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: normal;
-    margin-bottom: 0;
-    white-space: nowrap;
+    margin-bottom: 0.75rem;
 }
 
 .help-text {
