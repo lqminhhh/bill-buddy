@@ -8,7 +8,11 @@
         <div>
             <p class="eyebrow">New Trip</p>
             <h2>Create a trip</h2>
-            <p class="section-intro">Start with a trip name, choose a currency, and add the people who are joining.</p>
+            {% if step == "setup" %}
+                <p class="section-intro">Step 1 of 2: enter the trip details and how many people are participating.</p>
+            {% else %}
+                <p class="section-intro">Step 2 of 2: enter each member name and choose exactly one person as yourself.</p>
+            {% endif %}
         </div>
     </div>
 
@@ -23,68 +27,104 @@
         </div>
     {% endif %}
 
-    <form method="post" class="stack">
-        <div class="form-grid">
-            <div>
-                <label for="name">Trip Name</label>
-                <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value="{{ form_data['name'] }}"
-                    placeholder="Weekend in New York"
-                    required
-                >
-            </div>
+    {% if step == "setup" %}
+        <form method="post" class="stack">
+            <input type="hidden" name="step" value="setup">
 
-            <div>
-                <label for="currency">Currency</label>
-                <input
-                    id="currency"
-                    name="currency"
-                    type="text"
-                    value="{{ form_data['currency'] }}"
-                    placeholder="USD"
-                    maxlength="3"
-                    required
-                >
-            </div>
-        </div>
-
-        <div class="subsection">
-            <div class="subsection-header">
-                <h3>Members</h3>
-                <p class="help-text">Add up to {{ member_field_count }} members for this MVP and choose exactly one person as yourself.</p>
-            </div>
-
-            {% for index in range(member_field_count) %}
-                <div class="member-row">
+            <div class="form-grid">
+                <div>
+                    <label for="name">Trip Name</label>
                     <input
-                        id="member_name_{{ index }}"
-                        name="member_name_{{ index }}"
+                        id="name"
+                        name="name"
                         type="text"
-                        value="{{ form_data['member_names'][index] if index < form_data['member_names']|length else '' }}"
-                        placeholder="Member {{ index + 1 }} name"
+                        value="{{ form_data['name'] }}"
+                        placeholder="Weekend in New York"
+                        required
                     >
-
-                    <label class="radio-label" for="self_member_{{ index }}">
-                        <input
-                            id="self_member_{{ index }}"
-                            name="self_member_index"
-                            type="radio"
-                            value="{{ index }}"
-                            {% if form_data['self_member_index'] == index|string %}checked{% endif %}
-                        >
-                        This is me
-                    </label>
                 </div>
-            {% endfor %}
-        </div>
 
-        <div class="page-actions">
-            <button class="button" type="submit">Save Trip</button>
-            <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
-        </div>
-    </form>
+                <div>
+                    <label for="currency">Currency</label>
+                    <input
+                        id="currency"
+                        name="currency"
+                        type="text"
+                        value="{{ form_data['currency'] }}"
+                        placeholder="USD"
+                        maxlength="3"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label for="participant_count">Participant Count</label>
+                <input
+                    id="participant_count"
+                    name="participant_count"
+                    type="text"
+                    value="{{ form_data['participant_count'] }}"
+                    placeholder="8"
+                    required
+                >
+                <p class="help-text">Enter the total number of people in the trip. Large groups like 8, 10, or 12 are supported.</p>
+            </div>
+
+            <div class="page-actions">
+                <button class="button" type="submit">Continue</button>
+                <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
+            </div>
+        </form>
+    {% else %}
+        <form method="post" class="stack">
+            <input type="hidden" name="step" value="members">
+            <input type="hidden" name="name" value="{{ form_data['name'] }}">
+            <input type="hidden" name="currency" value="{{ form_data['currency'] }}">
+            <input type="hidden" name="participant_count" value="{{ form_data['participant_count'] }}">
+
+            <div class="trip-summary-box">
+                <p><span class="detail-label">Trip</span> {{ form_data["name"] }}</p>
+                <p><span class="detail-label">Currency</span> {{ form_data["currency"] }}</p>
+                <p><span class="detail-label">Participants</span> {{ form_data["participant_count"] }}</p>
+            </div>
+
+            <div class="subsection">
+                <div class="subsection-header">
+                    <h3>Member Names</h3>
+                    <p class="help-text">Fill in every name and select exactly one member as yourself.</p>
+                </div>
+
+                {% for index in range(form_data['participant_count']|int) %}
+                    <div class="member-row">
+                        <input
+                            id="member_name_{{ index }}"
+                            name="member_name_{{ index }}"
+                            type="text"
+                            value="{{ form_data['member_names'][index] if index < form_data['member_names']|length else '' }}"
+                            placeholder="Member {{ index + 1 }} name"
+                            required
+                        >
+
+                        <label class="radio-label" for="self_member_{{ index }}">
+                            <input
+                                id="self_member_{{ index }}"
+                                name="self_member_index"
+                                type="radio"
+                                value="{{ index }}"
+                                {% if form_data['self_member_index'] == index|string %}checked{% endif %}
+                            >
+                            This is me
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="page-actions">
+                <button class="button" type="submit">Save Trip</button>
+                <a class="button button-secondary" href="{{ url_for('create_trip') }}">Start Over</a>
+            </div>
+        </form>
+    {% endif %}
 </section>
 {% endblock %}

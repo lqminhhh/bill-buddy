@@ -13,7 +13,6 @@ from utils.helpers import format_cents, parse_money_to_cents, safe_strip
 
 
 DEFAULT_CURRENCY = "USD"
-MEMBER_FIELD_COUNT = 5
 
 
 def create_app():
@@ -36,85 +35,60 @@ def create_app():
 
     @app.route("/trip/new", methods=["GET", "POST"])
     def create_trip():
+        step = "setup"
         errors = []
         form_data = {
             "name": "",
             "currency": DEFAULT_CURRENCY,
-            "member_names": ["", "", ""],
+            "participant_count": "1",
+            "member_names": [],
             "self_member_index": "",
         }
 
         if request.method == "POST":
-            form_data = {
-                "name": safe_strip(request.form.get("name")),
-                "currency": safe_strip(request.form.get("currency")).upper()
-                or DEFAULT_CURRENCY,
-                "member_names": [
-                    safe_strip(request.form.get(f"member_name_{index}"))
-                    for index in range(MEMBER_FIELD_COUNT)
-                ],
-                "self_member_index": safe_strip(request.form.get("self_member_index")),
-            }
+            step = request.form.get("step", "setup")
 
-            member_names = [name for name in form_data["member_names"] if name]
+            if step == "setup":
+                form_data = _build_trip_setup_form_data(request.form)
+                errors, cleaned_data = _validate_trip_setup_form(form_data)
 
-            if not form_data["name"]:
-                errors.append("Trip name is required.")
+                if not errors:
+                    step = "members"
+                    form_data["participant_count"] = str(cleaned_data["participant_count"])
+                    form_data["member_names"] = [""] * cleaned_data["participant_count"]
 
-            if not form_data["currency"]:
-                errors.append("Currency is required.")
-            elif len(form_data["currency"]) != 3:
-                errors.append("Currency should be a 3-letter code like USD.")
+            elif step == "members":
+                form_data = _build_trip_members_form_data(request.form)
+                errors, cleaned_data = _validate_trip_members_form(form_data)
 
-            if not member_names:
-                errors.append("Add at least one member.")
-
-            if form_data["self_member_index"] == "":
-                errors.append("Choose exactly one member as yourself.")
-            else:
-                try:
-                    self_member_index = int(form_data["self_member_index"])
-                except ValueError:
-                    errors.append("Choose a valid member as yourself.")
-                    self_member_index = None
-
-                if self_member_index is not None:
-                    if self_member_index < 0 or self_member_index >= MEMBER_FIELD_COUNT:
-                        errors.append("Choose a valid member as yourself.")
-                    elif not form_data["member_names"][self_member_index]:
-                        errors.append("The selected 'you' member must have a name.")
-
-            if not errors:
-                with get_db_connection() as connection:
-                    trip_cursor = connection.execute(
-                        """
-                        INSERT INTO trips (name, currency)
-                        VALUES (?, ?)
-                        """,
-                        (form_data["name"], form_data["currency"]),
-                    )
-                    trip_id = trip_cursor.lastrowid
-
-                    for index, member_name in enumerate(form_data["member_names"]):
-                        if not member_name:
-                            continue
-
-                        is_self = 1 if str(index) == form_data["self_member_index"] else 0
-                        connection.execute(
+                if not errors:
+                    with get_db_connection() as connection:
+                        trip_cursor = connection.execute(
                             """
-                            INSERT INTO members (trip_id, name, is_self)
-                            VALUES (?, ?, ?)
+                            INSERT INTO trips (name, currency)
+                            VALUES (?, ?)
                             """,
-                            (trip_id, member_name, is_self),
+                            (cleaned_data["name"], cleaned_data["currency"]),
                         )
+                        trip_id = trip_cursor.lastrowid
 
-                return redirect(url_for("trip_detail", trip_id=trip_id))
+                        for index, member_name in enumerate(cleaned_data["member_names"]):
+                            is_self = 1 if index == cleaned_data["self_member_index"] else 0
+                            connection.execute(
+                                """
+                                INSERT INTO members (trip_id, name, is_self)
+                                VALUES (?, ?, ?)
+                                """,
+                                (trip_id, member_name, is_self),
+                            )
+
+                    return redirect(url_for("trip_detail", trip_id=trip_id))
 
         return render_template(
             "create_trip.html",
+            step=step,
             errors=errors,
             form_data=form_data,
-            member_field_count=MEMBER_FIELD_COUNT,
         )
 
     @app.route("/trip/<int:trip_id>")
@@ -138,6 +112,24 @@ def create_app():
             balance_summary=balance_summary,
             settlement_summary=settlement_summary,
         )
+
+    @app.route("/trip/<int:trip_id>/delete", methods=["GET", "POST"])
+    def delete_trip(trip_id):
+        trip = _get_trip_or_404(trip_id)
+
+        if request.method == "POST":
+            with get_db_connection() as connection:
+                connection.execute(
+                    """
+                    DELETE FROM trips
+                    WHERE id = ?
+                    """,
+                    (trip_id,),
+                )
+
+            return redirect(url_for("index"))
+
+        return render_template("delete_trip.html", trip=trip)
 
     @app.route("/trip/<int:trip_id>/expense/new", methods=["GET", "POST"])
     def add_expense(trip_id):
@@ -418,6 +410,98 @@ def _build_settlement_summary(members, expenses, expense_participants, currency)
         )
 
     return lines
+
+
+def _build_trip_setup_form_data(form):
+    return {
+        "name": safe_strip(form.get("name")),
+        "currency": safe_strip(form.get("currency")).upper() or DEFAULT_CURRENCY,
+        "participant_count": safe_strip(form.get("participant_count")),
+        "member_names": [],
+        "self_member_index": "",
+    }
+
+
+def _build_trip_members_form_data(form):
+    participant_count = safe_strip(form.get("participant_count"))
+
+    try:
+        count_value = int(participant_count)
+    except ValueError:
+        count_value = 0
+
+    return {
+        "name": safe_strip(form.get("name")),
+        "currency": safe_strip(form.get("currency")).upper() or DEFAULT_CURRENCY,
+        "participant_count": participant_count,
+        "member_names": [
+            safe_strip(form.get(f"member_name_{index}")) for index in range(max(count_value, 0))
+        ],
+        "self_member_index": safe_strip(form.get("self_member_index")),
+    }
+
+
+def _validate_trip_setup_form(form_data):
+    errors = []
+
+    if not form_data["name"]:
+        errors.append("Trip name is required.")
+
+    if not form_data["currency"]:
+        errors.append("Currency is required.")
+    elif len(form_data["currency"]) != 3:
+        errors.append("Currency should be a 3-letter code like USD.")
+
+    try:
+        participant_count = int(form_data["participant_count"])
+    except ValueError:
+        participant_count = None
+        errors.append("Participant count must be a whole number.")
+
+    if participant_count is not None and participant_count < 1:
+        errors.append("Participant count must be at least 1.")
+
+    cleaned_data = {
+        "name": form_data["name"],
+        "currency": form_data["currency"],
+        "participant_count": participant_count,
+    }
+
+    return errors, cleaned_data
+
+
+def _validate_trip_members_form(form_data):
+    errors, cleaned_setup = _validate_trip_setup_form(form_data)
+    participant_count = cleaned_setup["participant_count"]
+
+    if participant_count is None:
+        participant_count = 0
+
+    if len(form_data["member_names"]) != participant_count:
+        errors.append("Member list does not match participant count.")
+
+    if any(not member_name for member_name in form_data["member_names"]):
+        errors.append("All member names must be filled.")
+
+    try:
+        self_member_index = int(form_data["self_member_index"])
+    except ValueError:
+        self_member_index = None
+        errors.append("Choose exactly one member as yourself.")
+
+    if self_member_index is not None:
+        if self_member_index < 0 or self_member_index >= participant_count:
+            errors.append("Choose a valid member as yourself.")
+
+    cleaned_data = {
+        "name": cleaned_setup["name"],
+        "currency": cleaned_setup["currency"],
+        "participant_count": participant_count,
+        "member_names": form_data["member_names"],
+        "self_member_index": self_member_index,
+    }
+
+    return errors, cleaned_data
 
 
 def _build_expense_form_data(form):

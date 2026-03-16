@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Trip | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="section-card form-card">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Delete Trip</p>
+            <h2>{{ trip["name"] }}</h2>
+            <p class="section-intro">Are you sure you want to delete this trip?</p>
+        </div>
+    </div>
+
+    <div class="message message-warning">
+        <p>This action will permanently remove the trip and its related members, expenses, and participant links.</p>
+    </div>
+
+    <div class="page-actions">
+        <a class="button button-secondary" href="{{ url_for('index') }}">Cancel</a>
+        <form method="post" class="inline-form">
+            <button class="button button-danger" type="submit">Confirm Delete</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

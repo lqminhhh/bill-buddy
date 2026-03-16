@@ -283,6 +283,11 @@ textarea {
     color: #991b1b;
 }
 
+.message-warning {
+    background: #fff7ed;
+    color: #9a3412;
+}
+
 .trip-list,
 .member-list,
 .expense-list,
