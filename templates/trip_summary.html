@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Trip Summary | Bill Buddy{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div>
+        <p class="eyebrow">Trip Summary</p>
+        <h2>{{ trip["name"] }}</h2>
+        <p class="section-intro">Currency: {{ trip["currency"] }}</p>
+    </div>
+    <div class="page-actions">
+        <a class="button button-secondary" href="{{ url_for('trip_detail', trip_id=trip['id']) }}">Back to Trip Detail</a>
+    </div>
+</section>
+
+<section class="section-card">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Overview</p>
+            <h3>Trip summary metrics</h3>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p class="summary-label">Total trip spending</p>
+            <p class="summary-value">{{ format_cents(summary_metrics["total_trip_spending"], trip["currency"]) }}</p>
+        </article>
+
+        <article class="summary-card">
+            <p class="summary-label">Total number of expenses</p>
+            <p class="summary-value">{{ summary_metrics["total_expenses"] }}</p>
+        </article>
+
+        <article class="summary-card">
+            <p class="summary-label">Total number of members</p>
+            <p class="summary-value">{{ summary_metrics["total_members"] }}</p>
+        </article>
+
+        <article class="summary-card">
+            <p class="summary-label">Highest spender</p>
+            {% if summary_metrics["highest_spender"] %}
+                <p class="summary-value">{{ summary_metrics["highest_spender"]["name"] }}</p>
+                <p class="meta-line">{{ format_cents(summary_metrics["highest_spender"]["amount_cents"], trip["currency"]) }}</p>
+            {% else %}
+                <p class="summary-value">No data yet</p>
+            {% endif %}
+        </article>
+
+        <article class="summary-card">
+            <p class="summary-label">Member who owes the most</p>
+            {% if summary_metrics["member_who_owes_most"] %}
+                <p class="summary-value">{{ summary_metrics["member_who_owes_most"]["name"] }}</p>
+                <p class="meta-line">{{ format_cents(summary_metrics["member_who_owes_most"]["amount_cents"], trip["currency"]) }}</p>
+            {% else %}
+                <p class="summary-value">Everyone is settled</p>
+            {% endif %}
+        </article>
+
+        <article class="summary-card">
+            <p class="summary-label">Highest total share</p>
+            {% if summary_metrics["highest_total_share"] %}
+                <p class="summary-value">{{ summary_metrics["highest_total_share"]["name"] }}</p>
+                <p class="meta-line">{{ format_cents(summary_metrics["highest_total_share"]["amount_cents"], trip["currency"]) }}</p>
+            {% else %}
+                <p class="summary-value">No data yet</p>
+            {% endif %}
+        </article>
+    </div>
+</section>
+{% endblock %}

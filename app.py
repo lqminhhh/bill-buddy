@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, url_for
 
 from utils.calculations import (
     calculate_net_balance_by_member,
@@ -17,6 +17,7 @@ DEFAULT_CURRENCY = "USD"
 
 def create_app():
     app = Flask(__name__)
+    app.secret_key = "bill-buddy-dev"
 
     @app.context_processor
     def inject_template_helpers():
@@ -56,6 +57,8 @@ def create_app():
                     step = "members"
                     form_data["participant_count"] = str(cleaned_data["participant_count"])
                     form_data["member_names"] = [""] * cleaned_data["participant_count"]
+                else:
+                    _flash_validation_error()
 
             elif step == "members":
                 form_data = _build_trip_members_form_data(request.form)
@@ -82,7 +85,10 @@ def create_app():
                                 (trip_id, member_name, is_self),
                             )
 
+                    flash("Trip created successfully.", "success")
                     return redirect(url_for("trip_detail", trip_id=trip_id))
+                else:
+                    _flash_validation_error()
 
         return render_template(
             "create_trip.html",
@@ -95,13 +101,15 @@ def create_app():
     def trip_detail(trip_id):
         trip = _get_trip_or_404(trip_id)
         members = _get_trip_members(trip_id)
-        expenses = _get_trip_expenses(trip_id)
+        selected_payer_id = _get_valid_payer_filter(request.args.get("payer_id"), members)
+        all_expenses = _get_trip_expenses(trip_id)
+        expenses = _get_trip_expenses(trip_id, selected_payer_id)
         expense_participants = _get_trip_expense_participants(trip_id)
         balance_summary = _build_member_balance_summary(
-            members, expenses, expense_participants
+            members, all_expenses, expense_participants
         )
         settlement_summary = _build_settlement_summary(
-            members, expenses, expense_participants, trip["currency"]
+            members, all_expenses, expense_participants, trip["currency"]
         )
 
         return render_template(
@@ -109,8 +117,25 @@ def create_app():
             trip=trip,
             members=members,
             expenses=expenses,
+            selected_payer_id=selected_payer_id,
             balance_summary=balance_summary,
             settlement_summary=settlement_summary,
+        )
+
+    @app.route("/trip/<int:trip_id>/summary")
+    def trip_summary(trip_id):
+        trip = _get_trip_or_404(trip_id)
+        members = _get_trip_members(trip_id)
+        expenses = _get_trip_expenses(trip_id)
+        expense_participants = _get_trip_expense_participants(trip_id)
+        summary_metrics = _build_trip_summary_metrics(
+            trip, members, expenses, expense_participants
+        )
+
+        return render_template(
+            "trip_summary.html",
+            trip=trip,
+            summary_metrics=summary_metrics,
         )
 
     @app.route("/trip/<int:trip_id>/delete", methods=["GET", "POST"])
@@ -127,6 +152,7 @@ def create_app():
                     (trip_id,),
                 )
 
+            flash("Trip deleted successfully.", "success")
             return redirect(url_for("index"))
 
         return render_template("delete_trip.html", trip=trip)
@@ -156,7 +182,10 @@ def create_app():
                         connection, expense_id, cleaned_data["participant_ids"]
                     )
 
+                flash("Expense added successfully.", "success")
                 return redirect(url_for("trip_detail", trip_id=trip_id))
+            else:
+                _flash_validation_error()
 
         return render_template(
             "add_expense.html",
@@ -199,7 +228,10 @@ def create_app():
                         connection, expense_id, cleaned_data["participant_ids"]
                     )
 
+                flash("Expense updated successfully.", "success")
                 return redirect(url_for("trip_detail", trip_id=trip_id))
+            else:
+                _flash_validation_error()
         else:
             form_data = _build_expense_form_data_from_expense(expense)
             errors = []
@@ -227,6 +259,7 @@ def create_app():
                 (expense_id, trip_id),
             )
 
+        flash("Expense deleted successfully.", "success")
         return redirect(url_for("trip_detail", trip_id=trip_id))
 
     return app
@@ -261,9 +294,8 @@ def _get_trip_members(trip_id):
     return [dict(row) for row in rows]
 
 
-def _get_trip_expenses(trip_id):
-    expense_rows = fetch_all(
-        """
+def _get_trip_expenses(trip_id, payer_id=None):
+    query = """
         SELECT
             expenses.id,
             expenses.description,
@@ -275,10 +307,16 @@ def _get_trip_expenses(trip_id):
         FROM expenses
         JOIN members AS payer ON payer.id = expenses.paid_by_member_id
         WHERE expenses.trip_id = ?
-        ORDER BY expenses.expense_date DESC, expenses.id DESC
-        """,
-        (trip_id,),
-    )
+    """
+    params = [trip_id]
+
+    if payer_id is not None:
+        query += " AND expenses.paid_by_member_id = ?"
+        params.append(payer_id)
+
+    query += " ORDER BY expenses.expense_date DESC, expenses.id DESC"
+
+    expense_rows = fetch_all(query, tuple(params))
 
     participant_rows = fetch_all(
         """
@@ -308,6 +346,22 @@ def _get_trip_expenses(trip_id):
         expenses.append(expense)
 
     return expenses
+
+
+def _get_valid_payer_filter(raw_payer_id, members):
+    if not raw_payer_id:
+        return None
+
+    try:
+        payer_id = int(raw_payer_id)
+    except ValueError:
+        return None
+
+    member_ids = {member["id"] for member in members}
+    if payer_id not in member_ids:
+        return None
+
+    return payer_id
 
 
 def _get_trip_expense_participants(trip_id):
@@ -385,6 +439,59 @@ def _build_member_balance_summary(members, expenses, expense_participants):
         )
 
     return summary
+
+
+def _build_trip_summary_metrics(trip, members, expenses, expense_participants):
+    paid_by_member = calculate_total_paid_by_member(members, expenses)
+    share_by_member = calculate_total_owed_share_by_member(
+        members, expenses, expense_participants
+    )
+    net_by_member = calculate_net_balance_by_member(
+        members, expenses, expense_participants
+    )
+
+    total_trip_spending = sum(expense["amount_cents"] for expense in expenses)
+    total_expenses = len(expenses)
+    total_members = len(members)
+    members_by_id = {member["id"]: member for member in members}
+
+    highest_spender = None
+    if members:
+        highest_spender_id = max(paid_by_member, key=paid_by_member.get)
+        highest_spender = {
+            "name": members_by_id[highest_spender_id]["name"],
+            "amount_cents": paid_by_member[highest_spender_id],
+        }
+
+    member_who_owes_most = None
+    negative_balances = {
+        member_id: balance for member_id, balance in net_by_member.items() if balance < 0
+    }
+    if negative_balances:
+        owes_most_id = min(negative_balances, key=negative_balances.get)
+        member_who_owes_most = {
+            "name": members_by_id[owes_most_id]["name"],
+            "amount_cents": abs(net_by_member[owes_most_id]),
+        }
+
+    highest_total_share = None
+    if members:
+        highest_share_id = max(share_by_member, key=share_by_member.get)
+        highest_total_share = {
+            "name": members_by_id[highest_share_id]["name"],
+            "amount_cents": share_by_member[highest_share_id],
+        }
+
+    return {
+        "trip_name": trip["name"],
+        "currency": trip["currency"],
+        "total_trip_spending": total_trip_spending,
+        "total_expenses": total_expenses,
+        "total_members": total_members,
+        "highest_spender": highest_spender,
+        "member_who_owes_most": member_who_owes_most,
+        "highest_total_share": highest_total_share,
+    }
 
 
 def _build_settlement_summary(members, expenses, expense_participants, currency):
@@ -538,6 +645,9 @@ def _validate_expense_form(form_data, members):
     except ValueError as exc:
         errors.append(str(exc))
         amount_cents = None
+    else:
+        if amount_cents <= 0:
+            errors.append("Amount must be greater than 0.")
 
     if not form_data["expense_date"]:
         errors.append("Date is required.")
@@ -626,6 +736,10 @@ def _get_balance_class(net_balance):
     if net_balance < 0:
         return "balance-negative"
     return "balance-neutral"
+
+
+def _flash_validation_error():
+    flash("Please fix the errors in the form and try again.", "error")
 
 
 app = create_app()

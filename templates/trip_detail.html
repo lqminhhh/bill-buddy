@@ -11,6 +11,7 @@
     </div>
     <div class="page-actions">
         <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add Expense</a>
+        <a class="button button-secondary" href="{{ url_for('trip_summary', trip_id=trip['id']) }}">View Trip Summary</a>
         <a class="button button-secondary" href="{{ url_for('index') }}">Back to Trips</a>
     </div>
 </section>
@@ -52,7 +53,9 @@
                 </div>
             {% endif %}
         </section>
+    </div>
 
+    <aside class="side-column">
         <section class="section-card">
             <div class="section-heading">
                 <div>
@@ -74,84 +77,84 @@
                 </div>
             {% endif %}
         </section>
+    </aside>
+</section>
 
-        <section class="section-card">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">Expenses</p>
-                    <h3>Expense history</h3>
-                </div>
-            </div>
+<section class="section-card full-width-section">
+    <div class="section-heading table-header-row">
+        <div>
+            <p class="eyebrow">Expenses</p>
+            <h3>Expense history</h3>
+        </div>
 
-            {% if expenses %}
-                <ul class="expense-list">
+        <form method="get" class="filter-form">
+            <label for="payer_id">Filter by payer</label>
+            <select id="payer_id" name="payer_id">
+                <option value="">All</option>
+                {% for member in members %}
+                    <option
+                        value="{{ member['id'] }}"
+                        {% if selected_payer_id == member['id'] %}selected{% endif %}
+                    >
+                        {{ member["name"] }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button class="button button-secondary button-small" type="submit">Apply</button>
+        </form>
+    </div>
+
+    {% if expenses %}
+        <div class="table-wrap">
+            <table class="expense-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Paid by</th>
+                        <th>Participants</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                     {% for expense in expenses %}
-                        <li class="expense-item">
-                            <div class="expense-header">
-                                <div>
-                                    <strong>{{ expense["description"] }}</strong>
-                                    <p class="meta-line">{{ expense["expense_date"] }}</p>
-                                </div>
-                                <div class="expense-actions">
-                                    <span class="expense-amount">{{ format_cents(expense["amount_cents"], trip["currency"]) }}</span>
+                        <tr>
+                            <td>{{ expense["expense_date"] }}</td>
+                            <td>{{ expense["description"] }}</td>
+                            <td>{{ format_cents(expense["amount_cents"], trip["currency"]) }}</td>
+                            <td>{{ expense["payer_name"] }}</td>
+                            <td>
+                                {% for participant in expense["participants"] %}
+                                    {{ participant["name"] }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td>{{ expense["notes"] or "-" }}</td>
+                            <td>
+                                <div class="table-actions">
                                     <a class="button button-secondary button-small" href="{{ url_for('edit_expense', trip_id=trip['id'], expense_id=expense['id']) }}">Edit</a>
                                     <form method="post" action="{{ url_for('delete_expense', trip_id=trip['id'], expense_id=expense['id']) }}" class="inline-form">
                                         <button class="button button-danger button-small" type="submit">Delete</button>
                                     </form>
                                 </div>
-                            </div>
-                            <div class="detail-list">
-                                <p><span class="detail-label">Paid by</span> {{ expense["payer_name"] }}</p>
-                                <p>
-                                    <span class="detail-label">Participants</span>
-                                    {% for participant in expense["participants"] %}
-                                        {{ participant["name"] }}{% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </p>
-                                {% if expense["notes"] %}
-                                    <p><span class="detail-label">Notes</span> {{ expense["notes"] }}</p>
-                                {% endif %}
-                            </div>
-                        </li>
+                            </td>
+                        </tr>
                     {% endfor %}
-                </ul>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-panel compact-empty">
+            {% if selected_payer_id %}
+                <h4>No matching expenses</h4>
+                <p>No expenses were found for the selected payer.</p>
             {% else %}
-                <div class="empty-panel compact-empty">
-                    <h4>No expenses yet</h4>
-                    <p>Add the first shared cost for this trip to start tracking balances.</p>
-                    <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add First Expense</a>
-                </div>
+                <h4>No expenses yet</h4>
+                <p>Add the first shared cost for this trip to start tracking balances.</p>
+                <a class="button" href="{{ url_for('add_expense', trip_id=trip['id']) }}">Add First Expense</a>
             {% endif %}
-        </section>
-    </div>
-
-    <aside class="side-column">
-        <section class="section-card">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">Members</p>
-                    <h3>Trip members</h3>
-                </div>
-            </div>
-
-            {% if members %}
-                <ul class="member-list">
-                    {% for member in members %}
-                        <li class="member-item">
-                            <span>{{ member["name"] }}</span>
-                            {% if member["is_self"] %}
-                                <span class="badge">You</span>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <div class="empty-panel compact-empty">
-                    <h4>No members added yet</h4>
-                    <p>This trip does not have any members yet.</p>
-                </div>
-            {% endif %}
-        </section>
-    </aside>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

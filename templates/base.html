@@ -23,6 +23,18 @@
         </header>
 
         <main class="container page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <section class="flash-stack">
+                        {% for category, message in messages %}
+                            <div class="message flash-message flash-{{ category }}">
+                                <p>{{ message }}</p>
+                            </div>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+            {% endwith %}
+
             {% block content %}{% endblock %}
         </main>
 
