@@ -1,12 +1,13 @@
 # Bill Buddy
 
-## 1. Overview
+## I. Overview
 
 Bill Buddy is a Flask MVP for tracking shared trip expenses. It helps a group create trips, add members, record expenses, view balances, and generate a final settlement summary in a simple server-rendered interface.
 
-Demo video: [demo-video.mov](assets/demo-video.mov)
+[Demo Video](https://github.com/user-attachments/assets/d5b64d77-c972-4fc3-9e10-12ce908f0689)
 
-## 2. Features
+
+## II. Features
 
 - Create trips with a trip name and currency
 - Use a two-step trip creation flow with participant count first
@@ -27,7 +28,7 @@ Demo video: [demo-video.mov](assets/demo-video.mov)
 - Export expense history to an Excel-friendly CSV file
 - See flash messages for successful actions and validation errors
 
-## 3. Project Structure
+## III. Project Structure
 
 ```text
 bill-buddy/
@@ -55,7 +56,7 @@ bill-buddy/
     └── helpers.py
 ```
 
-## 4. How to Setup
+## IV. How to Setup
 
 1. Create a virtual environment:
 
@@ -93,7 +94,7 @@ python3 app.py
 http://127.0.0.1:5001
 ```
 
-## 5. Tech Stack
+## V. Tech Stack
 
 - Python
 - Flask
@@ -101,7 +102,7 @@ http://127.0.0.1:5001
 - Jinja Templates
 - HTML/CSS
 
-## 6. Contact Info
+## VI. Contact Info
 
 - Project owner: Minh Le
 - For questions or feedback, open an issue in this repository.
