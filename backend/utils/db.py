@@ -2,8 +2,9 @@ from pathlib import Path
 import sqlite3
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATABASE_PATH = BASE_DIR / "bill_buddy.db"
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BACKEND_DIR.parent
+DATABASE_PATH = PROJECT_ROOT / "bill_buddy.db"
 
 
 def get_db_connection():

@@ -1,11 +1,10 @@
-# Bill Buddy
+# 💸 Bill Buddy
 
 ## I. Overview
 
 Bill Buddy is a Flask MVP for tracking shared trip expenses. It helps a group create trips, add members, record expenses, view balances, and generate a final settlement summary in a simple server-rendered interface.
 
 [Demo Video](https://github.com/user-attachments/assets/d5b64d77-c972-4fc3-9e10-12ce908f0689)
-
 
 ## II. Features
 
@@ -32,28 +31,33 @@ Bill Buddy is a Flask MVP for tracking shared trip expenses. It helps a group cr
 
 ```text
 bill-buddy/
-├── app.py
-├── assets/
-│   └── demo-video.mov
-├── init_db.py
 ├── README.md
 ├── requirements.txt
-├── schema.sql
-├── static/
-│   └── style.css
-├── templates/
-│   ├── add_expense.html
-│   ├── base.html
-│   ├── create_trip.html
-│   ├── delete_trip.html
-│   ├── edit_expense.html
-│   ├── index.html
-│   ├── trip_detail.html
-│   └── trip_summary.html
-└── utils/
-    ├── calculations.py
-    ├── db.py
-    └── helpers.py
+├── .gitignore
+├── assets/
+│   └── demo-video.mov
+├── bill_buddy.db
+├── backend/
+│   ├── app.py                 
+│   ├── init_db.py
+│   ├── schema.sql
+│   └── utils/
+│       ├── __init__.py
+│       ├── calculations.py
+│       ├── db.py
+│       └── helpers.py
+└── frontend/
+    ├── templates/
+    │   ├── add_expense.html
+    │   ├── base.html
+    │   ├── create_trip.html
+    │   ├── delete_trip.html
+    │   ├── edit_expense.html
+    │   ├── index.html
+    │   ├── trip_detail.html
+    │   └── trip_summary.html
+    └── static/
+        └── style.css
 ```
 
 ## IV. How to Setup
@@ -79,13 +83,13 @@ pip install -r requirements.txt
 4. Initialize the database:
 
 ```bash
-python3 init_db.py
+python3 backend/init_db.py
 ```
 
 5. Run the app:
 
 ```bash
-python3 app.py
+python3 backend/app.py
 ```
 
 6. Open the app in your browser:
@@ -96,11 +100,11 @@ http://127.0.0.1:5001
 
 ## V. Tech Stack
 
-- Python
-- Flask
-- SQLite
-- Jinja Templates
-- HTML/CSS
+| Layer               | Technology                                                                                                 |
+| :------------------ | :--------------------------------------------------------------------------------------------------------- |
+| Backend             | Python 3, Flask                                                                                            |
+| Frontend            | Jinja Templates, HTML, CSS                                                                                 |
+| Database            | SQLite                                                                                                     |
 
 ## VI. Contact Info
 

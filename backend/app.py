@@ -1,6 +1,7 @@
 import csv
 from datetime import date
 from io import StringIO
+from pathlib import Path
 
 from flask import Flask, abort, flash, make_response, redirect, render_template, request, url_for
 
@@ -15,10 +16,17 @@ from utils.helpers import format_cents, parse_money_to_cents, safe_strip
 
 
 DEFAULT_CURRENCY = "USD"
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder=str(FRONTEND_DIR / "templates"),
+        static_folder=str(FRONTEND_DIR / "static"),
+    )
     app.secret_key = "bill-buddy-dev"
 
     @app.context_processor
