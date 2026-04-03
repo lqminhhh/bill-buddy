@@ -87,21 +87,32 @@
             <h3>Expense history</h3>
         </div>
 
-        <form method="get" class="filter-form">
-            <label for="payer_id">Filter by payer</label>
-            <select id="payer_id" name="payer_id">
-                <option value="">All</option>
-                {% for member in members %}
-                    <option
-                        value="{{ member['id'] }}"
-                        {% if selected_payer_id == member['id'] %}selected{% endif %}
-                    >
-                        {{ member["name"] }}
-                    </option>
-                {% endfor %}
-            </select>
-            <button class="button button-secondary button-small" type="submit">Apply</button>
-        </form>
+        <div class="table-controls">
+            <form method="get" class="filter-form">
+                <div class="filter-field">
+                    <label for="payer_id">Filter by payer</label>
+                    <select id="payer_id" name="payer_id">
+                        <option value="">All</option>
+                        {% for member in members %}
+                            <option
+                                value="{{ member['id'] }}"
+                                {% if selected_payer_id == member['id'] %}selected{% endif %}
+                            >
+                                {{ member["name"] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="button button-secondary button-small" type="submit">Apply Filter</button>
+            </form>
+
+            <a
+                class="button button-small"
+                href="{{ url_for('export_expenses', trip_id=trip['id'], payer_id=selected_payer_id) if selected_payer_id else url_for('export_expenses', trip_id=trip['id']) }}"
+            >
+                Export for Excel
+            </a>
+        </div>
     </div>
 
     {% if expenses %}

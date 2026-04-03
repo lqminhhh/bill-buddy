@@ -1,6 +1,8 @@
+import csv
 from datetime import date
+from io import StringIO
 
-from flask import Flask, abort, flash, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, make_response, redirect, render_template, request, url_for
 
 from utils.calculations import (
     calculate_net_balance_by_member,
@@ -121,6 +123,22 @@ def create_app():
             balance_summary=balance_summary,
             settlement_summary=settlement_summary,
         )
+
+    @app.route("/trip/<int:trip_id>/expenses/export")
+    def export_expenses(trip_id):
+        trip = _get_trip_or_404(trip_id)
+        members = _get_trip_members(trip_id)
+        selected_payer_id = _get_valid_payer_filter(request.args.get("payer_id"), members)
+        expenses = _get_trip_expenses(trip_id, selected_payer_id)
+
+        csv_file = _build_expenses_csv(trip, expenses)
+        safe_trip_name = _slugify_filename(trip["name"])
+        filename = f"{safe_trip_name}-expenses.csv"
+
+        response = make_response(csv_file)
+        response.headers["Content-Type"] = "text/csv; charset=utf-8"
+        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
     @app.route("/trip/<int:trip_id>/summary")
     def trip_summary(trip_id):
@@ -362,6 +380,44 @@ def _get_valid_payer_filter(raw_payer_id, members):
         return None
 
     return payer_id
+
+
+def _build_expenses_csv(trip, expenses):
+    output = StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(
+        ["Date", "Description", "Amount", "Paid By", "Participants", "Notes"]
+    )
+
+    for expense in expenses:
+        participants = ", ".join(
+            participant["name"] for participant in expense["participants"]
+        )
+        writer.writerow(
+            [
+                expense["expense_date"],
+                expense["description"],
+                format_cents(expense["amount_cents"], trip["currency"]),
+                expense["payer_name"],
+                participants,
+                expense["notes"] or "",
+            ]
+        )
+
+    return output.getvalue()
+
+
+def _slugify_filename(value):
+    cleaned = safe_strip(value).lower().replace(" ", "-")
+    allowed = []
+
+    for character in cleaned:
+        if character.isalnum() or character in {"-", "_"}:
+            allowed.append(character)
+
+    filename = "".join(allowed).strip("-_")
+    return filename or "bill-buddy-trip"
 
 
 def _get_trip_expense_participants(trip_id):
