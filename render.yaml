@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: bill-buddy-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt && cd backend && alembic upgrade head
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --app-dir backend
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.12.7"
