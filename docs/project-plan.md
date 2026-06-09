@@ -8,16 +8,23 @@ This file is the single source of truth for what's been built, what's pending, a
 
 ## Current state — June 2026
 
-**Phases 1–4 complete. Phase 5 Piece 1 (auth + share links) complete locally. Phase 5 Pieces 2 & 3 (Render + Vercel deployment) are next.**
+**Phases 1–5 complete. The app is now deployed on the intended Render + Vercel + Neon stack. Phase 6 (polish) is the active backlog.**
 
-What works right now, locally:
+What works right now, locally and in production:
 - FastAPI backend with 34 endpoints, talking to Neon Postgres via SQLAlchemy + Alembic
 - JWT-based auth: signup, login, /me, owner-isolated trip access
 - Share-link sharing: anyone with a `/api/share/{token}` URL can view + add/edit expenses, no signup required
 - React + Vite + TypeScript + Tailwind + shadcn/ui frontend with emerald theme and system dark mode
 - 65 backend tests passing (25 pure-math + 23 trip API + 10 auth + 7 share)
+- Render deployment with `/healthz` health checks and Alembic migrations on deploy
+- Vercel deployment with SPA rewrites for direct visits to nested routes like `/share/:token`
 
-Live: nowhere yet. Local dev only.
+Live status:
+- Backend is deployed on Render
+- Frontend is deployed on Vercel
+- Database is Neon Postgres
+
+Exact production URLs are intentionally not committed here; keep them in deployment settings, not source control.
 
 ---
 
@@ -67,15 +74,15 @@ Render free web service  ──────► FastAPI + SQLAlchemy + Alembic + 
 
 ```
 bill-buddy/
-├── README.md                            # original Flask-era README, somewhat stale
+├── README.md                            # top-level overview and current local setup
 ├── docs/
 │   ├── project-plan.md                  # THIS FILE — the source of truth
 │   ├── neon-setup.md                    # Neon signup + connection string steps
-│   └── deploy.md                        # (TBD) deploy walkthrough for Render + Vercel
+│   └── deploy.md                        # deployment + redeploy reference for Render + Vercel
 ├── .env.example                         # JWT_SECRET_KEY, DATABASE_URL, ALLOWED_ORIGINS
 ├── .env                                 # gitignored; contains real Neon URL + secrets
 ├── Procfile                             # `web: uvicorn api.main:app --host 0.0.0.0 --port $PORT --app-dir backend`
-├── render.yaml                          # (TBD) Render IaC for one-click deploy
+├── render.yaml                          # Render IaC for one-click backend deploy
 ├── pytest.ini                           # testpaths=tests, pythonpath=backend
 ├── requirements.txt                     # production deps
 ├── requirements-dev.txt                 # +pytest, +httpx
@@ -306,50 +313,31 @@ Built a React + Vite + TypeScript + Tailwind + shadcn UI from scratch, mirroring
 
 ---
 
-## Phase 5 Piece 2 — Deploy backend to Render 🔜
+## Phase 5 Piece 2 — Deploy backend to Render ✅
 
-**User action required:** sign up at https://render.com (free, no card). Push code to GitHub.
+Completed:
+- Added `render.yaml` and confirmed the `Procfile`/uvicorn start path
+- Configured Render build command to install dependencies and run `alembic upgrade head`
+- Added `/healthz` for Render health checks
+- Confirmed production env loading for `DATABASE_URL`, `JWT_SECRET_KEY`, and `ALLOWED_ORIGINS`
+- Documented the deployment flow in [deploy.md](./deploy.md)
 
-**Code prep (assistant's job, done before user clicks):**
-- [ ] Add `render.yaml` (IaC for one-click deploy)
-- [ ] Confirm `Procfile` start command works
-- [ ] Document build command: `pip install -r requirements.txt && cd backend && alembic upgrade head`
-- [ ] Document env vars to set in Render dashboard
-- [ ] Add a `runtime.txt` or pin Python version in `render.yaml`
-- [ ] Make sure `/healthz` is the health-check path Render hits
-- [ ] Make sure `JWT_SECRET_KEY` is loaded properly from env (already done in auth.py)
-- [ ] Sanity-check that gunicorn isn't needed (uvicorn alone is fine for free tier with 1 worker)
-- [ ] Write `docs/deploy.md` with step-by-step
+Operational notes:
+- Render free tier cold starts still apply after ~15 minutes idle
+- `ALLOWED_ORIGINS` must be set to the exact Vercel URL; wildcard CORS is not valid with credentials enabled
+- DB migrations run during deploy, so schema changes must always be committed as Alembic revisions
 
-**User-facing dashboard steps (covered in `docs/deploy.md`):**
-1. Push current repo to GitHub
-2. Render dashboard → New → Web Service → connect GitHub
-3. Render auto-detects `render.yaml` (or set Build + Start manually)
-4. Set env vars: `DATABASE_URL`, `JWT_SECRET_KEY`, `ALLOWED_ORIGINS=*` temporarily
-5. Deploy. Note the URL.
-6. Test: `curl https://<your-url>.onrender.com/healthz`
+## Phase 5 Piece 3 — Deploy frontend to Vercel ✅
 
-**Exit criteria:** `https://your-app.onrender.com/api/auth/signup` works from curl.
+Completed:
+- Added `frontend/vercel.json` for SPA rewrite support
+- Configured Vercel with `frontend` as the root directory
+- Wired `VITE_API_BASE_URL` to the Render backend
+- Verified end-to-end signup/login and share-link flows after CORS was set correctly on Render
 
-## Phase 5 Piece 3 — Deploy frontend to Vercel 🔜
-
-**User action required:** sign up at https://vercel.com (free, login with GitHub).
-
-**Code prep:**
-- [ ] Add `frontend/vercel.json` with SPA fallback rewrites (so `/share/abc` works on direct visit)
-- [ ] Document Vercel project settings (root directory = `frontend`)
-- [ ] Document `VITE_API_BASE_URL` env var setting
-
-**User-facing dashboard steps:**
-1. Vercel dashboard → New Project → Import Git Repo → pick bill-buddy
-2. **Root Directory:** `frontend`
-3. Framework: auto-detected as Vite
-4. Env var: `VITE_API_BASE_URL` = Render URL from Piece 2
-5. Deploy. Note the Vercel URL.
-6. Back in Render, update `ALLOWED_ORIGINS` to the Vercel URL
-7. End-to-end test: sign up via Vercel URL, create trip, share link to a private/incognito window
-
-**Exit criteria:** End-to-end signup → trip creation → share-link flow works on the live URLs.
+Operational notes:
+- Direct visits to nested routes like `/share/<token>` rely on the Vercel rewrite file
+- Frontend deploys are automatic on pushes to `main`
 
 ---
 
@@ -441,7 +429,7 @@ python -c "from api.database import SessionLocal; from api.models import *; db =
 
 - **JWT storage**: localStorage works but is XSS-vulnerable. If we ever introduce user-generated rich content, switch to `httpOnly` cookie + CSRF tokens.
 - **Custom domain**: ~$10/yr. Defer until app has real users.
-- **Cold-start mitigation on Render free**: 30s cold start hurts UX. Options: UptimeRobot ping every 5 min (gray-area on Render's free tier TOS), accept it, or pay $7/mo.
+- **Cold-start mitigation on Render free**: 30s cold start hurts UX in the live app. Options: UptimeRobot ping every 5 min (gray-area on Render's free tier TOS), accept it, or pay $7/mo.
 - **Member ↔ User linking**: currently members are name-only. Could be linked to real User accounts later (Option C from the original three-way fork) for stronger collaboration semantics.
 - **CSV export from frontend**: currently a direct link to `/api/share/{token}/expenses.csv`. For authed routes it builds a URL without the token in the header — works because exports.csv is also CORS-enabled. Watch for browser cookie behavior in prod.
 
@@ -456,4 +444,4 @@ python -c "from api.database import SessionLocal; from api.models import *; db =
 - shadcn/ui components: https://ui.shadcn.com/docs/components
 - TanStack Query v5: https://tanstack.com/query/v5
 - Local setup notes: [docs/neon-setup.md](./neon-setup.md)
-- Deployment walkthrough (in progress): [docs/deploy.md](./deploy.md)
+- Deployment + redeploy reference: [docs/deploy.md](./deploy.md)

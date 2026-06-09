@@ -1,112 +1,146 @@
-# 💸 Bill Buddy
+# Bill Buddy
 
-## I. Overview
-
-Bill Buddy is a Flask MVP for tracking shared trip expenses. It helps a group create trips, add members, record expenses, view balances, and generate a final settlement summary in a simple server-rendered interface.
+Bill Buddy is a deployed full-stack app for tracking shared trip expenses. It lets a group create trips, add members, record expenses, view balances, generate settlement suggestions, and share a public edit link with friends who do not need accounts.
 
 [Demo Video](https://github.com/user-attachments/assets/d5b64d77-c972-4fc3-9e10-12ce908f0689)
 
-## II. Features
+## Features
 
 - Create trips with a trip name and currency
-- Use a two-step trip creation flow with participant count first
 - Add all trip members and mark exactly one member as yourself
-- View all trips from the home page
-- Delete trips with a confirmation page
+- Sign up, sign in, and stay authenticated with JWT
+- View only your own trips when signed in
+- Share a trip via a link so other people can view and add/edit expenses without signing up
 - Add expenses with description, amount, date, payer, participants, and optional notes
 - Edit expenses
 - Delete expenses
-- View per-member balances:
-  - total paid
-  - total share
-  - net balance
+- View per-member balances, paid totals, shares, and net amounts
 - View final settlement suggestions in plain language
 - Open a dedicated trip summary page
 - View total spending, total expenses, total members, highest spender, highest share, and member who owes the most
 - Filter expense history by payer
 - Export expense history to an Excel-friendly CSV file
-- See flash messages for successful actions and validation errors
 
-## III. Project Structure
+## Stack
+
+| Layer | Technology |
+| --- | --- |
+| Backend | FastAPI, SQLAlchemy, Alembic, Pydantic, bcrypt, JWT |
+| Frontend | React, Vite, TypeScript, Tailwind CSS v4, shadcn/ui, TanStack Query |
+| Database | Neon Postgres |
+| Hosting | Render (API), Vercel (frontend) |
+
+## Project Structure
 
 ```text
 bill-buddy/
 ├── README.md
-├── requirements.txt
-├── .gitignore
+├── docs/
+│   ├── project-plan.md
+│   ├── deploy.md
+│   └── neon-setup.md
 ├── assets/
 │   └── demo-video.mov
-├── bill_buddy.db
 ├── backend/
-│   ├── app.py                 
+│   ├── alembic/
+│   ├── api/
 │   ├── init_db.py
 │   ├── schema.sql
 │   └── utils/
-│       ├── __init__.py
-│       ├── calculations.py
-│       ├── db.py
-│       └── helpers.py
-└── frontend/
-    ├── templates/
-    │   ├── add_expense.html
-    │   ├── base.html
-    │   ├── create_trip.html
-    │   ├── delete_trip.html
-    │   ├── edit_expense.html
-    │   ├── index.html
-    │   ├── trip_detail.html
-    │   └── trip_summary.html
-    └── static/
-        └── style.css
+├── frontend/
+│   ├── public/
+│   └── src/
+├── requirements.txt
+├── requirements-dev.txt
+├── render.yaml
+├── Procfile
+└── pytest.ini
 ```
 
-## IV. How to Setup
+## Local Development
 
-1. Create a virtual environment:
+1. Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
-```
-
-2. Activate it:
-
-```bash
 source .venv/bin/activate
 ```
 
-3. Install dependencies:
+2. Install backend dependencies:
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-4. Initialize the database:
+3. Start the backend:
 
 ```bash
-python3 backend/init_db.py
+uvicorn api.main:app --reload --app-dir backend
 ```
 
-5. Run the app:
+4. Start the frontend in a second terminal:
 
 ```bash
-python3 backend/app.py
+cd frontend
+npm install
+npm run dev
 ```
 
-6. Open the app in your browser:
+5. Open:
 
 ```text
-http://127.0.0.1:5001
+http://localhost:5173
 ```
 
-## V. Tech Stack
+The frontend dev server proxies `/api` to the backend on port `8000`.
 
-| Layer               | Technology                                                                                                 |
-| :------------------ | :--------------------------------------------------------------------------------------------------------- |
-| Backend             | Python 3, Flask                                                                                            |
-| Frontend            | Jinja Templates, HTML, CSS                                                                                 |
-| Database            | SQLite                                                                                                     |
+## Environment Variables
 
-## VI. Contact Info
+Backend:
+
+- `DATABASE_URL`: Neon/Postgres connection string in production; defaults to local SQLite in dev if unset
+- `JWT_SECRET_KEY`: required in production
+- `ALLOWED_ORIGINS`: comma-separated frontend origins for CORS
+
+Frontend:
+
+- `VITE_API_BASE_URL`: required in production; leave unset in local dev to use the Vite proxy
+
+See [.env.example](./.env.example) for sample values.
+
+## Testing
+
+Backend:
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+## Deployment
+
+The app is deployed on:
+
+- Render for the FastAPI backend
+- Vercel for the React frontend
+- Neon for Postgres
+
+For setup and redeploy steps, use [docs/deploy.md](./docs/deploy.md). The handoff and roadmap live in [docs/project-plan.md](./docs/project-plan.md).
+
+## Notes
+
+- The current README replaces the older Flask-era description.
+- Some Flask-era reference files still exist under `backend/` but are no longer part of the runtime path.
+
+## Contact
 
 - Project owner: Minh Le
 - For questions or feedback, open an issue in this repository.

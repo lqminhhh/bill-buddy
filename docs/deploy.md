@@ -1,15 +1,30 @@
 # Deploying Bill Buddy
 
-Step-by-step guide to get Bill Buddy live on a $0/month stack:
+Step-by-step guide for the stack Bill Buddy now uses in production:
 **Render (backend) + Vercel (frontend) + Neon (database).**
 
-Estimated time: **~45 minutes of clicks** on your side (most of it waiting for builds).
+This document is now both:
+- the original deployment recipe
+- the ongoing redeploy/maintenance reference for the live app
+
+Estimated first-time setup: **~45 minutes of clicks** on your side.
 
 ---
 
-## Prerequisites
+## Status
 
-- [x] Neon Postgres account with a project + `DATABASE_URL` (done in [neon-setup.md](./neon-setup.md))
+- [x] Neon Postgres is in use
+- [x] Backend is deployed on Render
+- [x] Frontend is deployed on Vercel
+- [x] CORS is configured to allow the production frontend origin
+
+Exact live URLs are intentionally omitted from source control. Keep those in the hosting dashboards and environment settings.
+
+---
+
+## Prerequisites for a fresh redeploy
+
+- [x] Neon Postgres account with a project + `DATABASE_URL` (see [neon-setup.md](./neon-setup.md))
 - [ ] GitHub account
 - [ ] Render account (free, no credit card) — sign up at https://render.com
 - [ ] Vercel account (free, login with GitHub) — sign up at https://vercel.com
@@ -63,7 +78,7 @@ In the Render dashboard → your service → **Environment** tab:
 | --- | --- | --- |
 | `DATABASE_URL` | Your Neon URL (the `postgresql+psycopg://...` form) | Paste from your local `.env` |
 | `JWT_SECRET_KEY` | `(generated)` | Click **Generate** for a 64-char random value |
-| `ALLOWED_ORIGINS` | *Leave unset for now* | Defaults to localhost dev. We set it to the Vercel URL in Step 4. |
+| `ALLOWED_ORIGINS` | *Leave unset for first deploy* | Defaults to localhost dev. Set it to the Vercel URL in Step 4. |
 | `ENV` | `production` | Forces `JWT_SECRET_KEY` to be required |
 | `PYTHON_VERSION` | `3.12.7` | Matches `runtime.txt` |
 
@@ -146,6 +161,23 @@ If any step fails, check:
 
 ---
 
+## Ongoing deploy workflow
+
+After the app is live, the normal release path is:
+
+1. Push code to GitHub
+2. Merge to `main`
+3. Vercel auto-deploys the frontend
+4. Render auto-deploys the backend
+5. Render runs Alembic migrations during the build
+6. Smoke-test signup/login, trip creation, and a share link
+
+For backend-only env changes like `ALLOWED_ORIGINS` or `JWT_SECRET_KEY`, update the Render dashboard and let it redeploy.
+
+For frontend-only env changes like `VITE_API_BASE_URL`, update the Vercel project settings and redeploy there.
+
+---
+
 ## Optional: Reduce cold starts
 
 Render free tier sleeps your service after 15 minutes of idle traffic, causing a ~30s wake-up on the next visit.
@@ -185,7 +217,7 @@ git push origin feature/something
 # Open a PR on GitHub, merge to main → auto-deploy
 ```
 
-For schema changes, **always** generate an Alembic migration locally and commit it — Render's build command runs `alembic upgrade head` automatically, so no manual DB intervention needed.
+For schema changes, **always** generate an Alembic migration locally and commit it. Render's build command runs `alembic upgrade head` automatically, so no manual DB intervention should be needed.
 
 ---
 
